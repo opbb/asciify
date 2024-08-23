@@ -105,6 +105,13 @@ html_header="<!DOCTYPE html>\n
         margin: auto;\n
       }\n
 \n
+      #audio-warning {\n
+        font-size: 12px;\n
+        margin: 10px;\n
+        text-wrap: wrap;\n
+        line-height: 15px;\n
+      }\n
+\n
       button {\n
         color: white;\n
         background-color: black;\n
@@ -123,6 +130,12 @@ html_header="<!DOCTYPE html>\n
   </head>\n
   <body>\n
     <div id=\"screen-container\">\n
+      <div id="audio-warning" hidden>\n
+        <i\n
+          >(Warning: The audio for this video could not be found. Please ensure\n
+          it is in the same folder, and is named ${animation_name}_Audio.mp3)</i\n
+        >\n
+      </div>\n
       <button onclick=\"buttonPress()\">&#9658;</button>\n
       <b><div id=\"anim-container\"></div></b>\n
     </div>\n
@@ -133,8 +146,7 @@ html_footer="holdFor: 250,\n
       ];\n
     </script>\n
     <script>\n
-      const useAudio = $include_audio;\n
-      \n
+      let useAudio = $include_audio;\n
       let audioElement = undefined;\n
       if (useAudio) {\n
         audioElement = new Audio(\n
@@ -195,7 +207,11 @@ html_footer="holdFor: 250,\n
             }, currentTimeMs)\n
           );\n
           if (useAudio) {\n
-            audioElement.play();\n
+            let playResult = audioElement.play();\n
+            playResult.catch((e) => {\n
+              useAudio = false;\n
+              document.getElementById(\"audio-warning\").hidden = false;\n
+            });\n
             audioElement.currentTime = 0;\n
           }\n
         }\n
