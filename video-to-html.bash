@@ -150,7 +150,7 @@ html_footer="holdFor: 250,\n
       let audioElement = undefined;\n
       if (useAudio) {\n
         audioElement = new Audio(\n
-          window.location.href.replace(/.html/, \"_Audio.mp3\")\n
+          window.location.href.replace(/\.html/, \"_Audio.mp3\")\n
         );\n
         audioElement.load();\n
       }\n
@@ -267,7 +267,7 @@ do
   trimmed="${file#./$animation_name/frames/}"
   trimmed="${trimmed%.jpg}"
   echo -ne "\r$trimmed"
-  if [ use_bin = true ]; then
+  if [ $use_bin = true ]; then
     image-to-text -i "$file" -n "./$animation_name/frames/${trimmed}" -r $reduction_amount -m -e
   else
     ./image-to-text.bash -i "$file" -n "./$animation_name/frames/${trimmed}" -r $reduction_amount -m -e
