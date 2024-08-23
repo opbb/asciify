@@ -236,13 +236,26 @@ if [ $include_audio = true ]; then
   ffmpeg -i $input_file_path "$animation_name/${animation_name}_Audio.mp3"
 fi
 
+if [ "$(which image-to-text)" != "" ]; then
+  use_bin=true
+elif [ -f "./image-to-text.bash" ]; then
+  use_bin=false
+else
+  echo "Could not find image-to-text, make sure it is either in the same folder as video-to-html-animation, or in your bin folder."
+  exit 1
+fi
+
 echo "Convert Frames to Text:"
 for file in ./$animation_name/frames/*
 do
   trimmed="${file#./$animation_name/frames/}"
   trimmed="${trimmed%.jpg}"
   echo -ne "\r$trimmed"
-  image-to-text -r $reduction_amount "$file" "./$animation_name/frames/${trimmed}"
+  if [ use_bin = true ]; then
+    image-to-text -i "$file" -n "./$animation_name/frames/${trimmed}" -r $reduction_amount -m -e
+  else
+    ./image-to-text.bash -i "$file" -n "./$animation_name/frames/${trimmed}" -r $reduction_amount -m -e
+  fi
 done
 
 # Calculate miliseconds per frame, rounded down to nearest whole number

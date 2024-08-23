@@ -6,8 +6,9 @@ image-to-text -i file_path [OPTIONS]\n
 \n
 OPTIONS:\n
  -i file_path   \t input file path (REQUIRED)\n
- -a           \t\t use all characters to represent an image (increases quality, but makes all images a similar brightness)\n
+ -n file_name   \t output file name (without the extension)\n
  -r int         \t set factor image resolution will be reduced by.\n
+ -a           \t\t use all characters to represent an image (increases quality, but makes all images a similar brightness)\n
  -e           \t\t enhance edges.\n
  -p           \t\t render only in plaintext\n
  -m           \t\t render only in HTML (m is for markup)\n
@@ -27,12 +28,13 @@ input_file_path_flag=false
 # ======================
 
 # === PROCESS OPTIONS ===
-while getopts i:ar:epmh flag
+while getopts i:n:r:aepmh flag
 do
     case "${flag}" in
         i) input_file_path_flag=true;input_file_path=${OPTARG};;
-        a) use_all_characters="True";;
+        n) output_file_name=${OPTARG};;
         r) reduction_amount=${OPTARG};;
+        a) use_all_characters="True";;
         e) enhanceEdges="True";;
         p) render_plaintext="True";;
         m) render_html="True";;
