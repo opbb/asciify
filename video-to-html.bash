@@ -1,12 +1,12 @@
 #!/usr/bin/bash
 
 # ====== OPTIONS ======
-help_message="video-to-html-animation -i file_path [OPTIONS]\n
+help_message="video-to-html -i file_path [OPTIONS]\n
 \n
 OPTIONS:\n
  -i file_path   \t input file path (REQUIRED)\n
  -f int         \t framerate in frames per second\n
- -n file_name   \t name of the animation\n
+ -n file_name   \t name of the output\n
  -r int         \t resolution reduction factor\n
  -o           \t\t overwrite pre-existing files\n
  -a           \t\t include audio\n
