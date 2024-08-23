@@ -1,4 +1,5 @@
 #!/usr/bin/bash
+
 # ====== OPTIONS ======
 help_message="=== IMAGE TO TEXT ===\n
 image-to-text -i file_path [OPTIONS]\n
