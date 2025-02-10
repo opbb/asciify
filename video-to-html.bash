@@ -13,6 +13,7 @@ OPTIONS:\n
  -k           \t\t keep individual frame files after they are done being compiled\n
  -j           \t\t render to json only (default is both JSON and standalone)\n
  -s           \t\t render to standalone HTML only (default is both JSON and standalone)\n
+ -l           \t\t loop video like a gif\n
  -h           \t\t print help message"
 
 # DEFAULT VALUES
@@ -24,13 +25,14 @@ include_audio=false
 keep_frames=false
 render_json=false
 render_html=false
+loop=false
 
 # REQUIRED VALUES
 input_file_path_flag=false
 # ======================
 
 # === PROCESS OPTIONS ===
-while getopts i:f:n:r:oajsh flag
+while getopts i:f:n:r:oajslh flag
 do
     case "${flag}" in
         i) input_file_path_flag=true;input_file_path=${OPTARG};;
@@ -42,6 +44,7 @@ do
         k) keep_frames=true;;
         j) render_json=true;;
         s) render_html=true;;
+        l) loop=true;;
         h) echo -e $help_message;exit 0;;
         \?) echo -e $help_message;exit 0;;
     esac
@@ -135,13 +138,17 @@ html_header="<!DOCTYPE html>\n
           >(Warning: The audio for this video could not be found. Please ensure\n
           it is in the same folder, and is named ${animation_name}_Audio.mp3)</i\n
         >\n
-      </div>\n
-      <button onclick=\"buttonPress()\">&#9658;</button>\n
+      </div>\n"
+if [ $loop = false ]; then
+  html_header="$html_header
+    <button onclick=\"buttonPress()\">&#9658;</button>\n"
+fi
+html_header="$html_header
       <b><div id=\"anim-container\"></div></b>\n
     </div>\n
     <script>\n
       frames = ["
-html_footer="holdFor: 250,\n
+html_footer="holdFor: 40,\n
         },\n
       ];\n
     </script>\n
@@ -154,7 +161,8 @@ html_footer="holdFor: 250,\n
         );\n
         audioElement.load();\n
       }\n
-      let isPlaying = false;\n
+      let isPlaying = $loop;\n
+      let loop = $loop;\n
 \n
       const timeoutIds = [];\n
       function clearTimeouts() {\n
@@ -183,6 +191,30 @@ html_footer="holdFor: 250,\n
         }\n
       }\n
 \n
+      function startPlaying() {\n
+        let currentTimeMs = 0;\n
+        for (let i = 0; i < frames.length; i++) {\n
+          timeoutIds.push(\n
+          setTimeout(updateAnimContainer, currentTimeMs, frames[i].frame)\n
+          );\n
+          currentTimeMs += frames[i].holdFor;\n
+        }\n
+        timeoutIds.push(\n
+        setTimeout(() => {\n
+          if (!loop) { setIsPlaying(false); }\n
+          clearTimeouts();\n
+          if (loop) { startPlaying(); }\n
+        }, currentTimeMs)\n
+        );\n
+        if (useAudio) {\n
+          let playResult = audioElement.play();\n
+          playResult.catch((e) => {\n
+            useAudio = false;\n
+            document.getElementById(\"audio-warning\").hidden = false;\n
+          });\n
+          audioElement.currentTime = 0;\n
+        }\n
+      }\n
       function buttonPress() {\n
         if (isPlaying) {\n
           setIsPlaying(false);\n
@@ -193,29 +225,11 @@ html_footer="holdFor: 250,\n
           }\n
         } else {\n
           setIsPlaying(true);\n
-          let currentTimeMs = 0;\n
-          for (let i = 0; i < frames.length; i++) {\n
-            timeoutIds.push(\n
-              setTimeout(updateAnimContainer, currentTimeMs, frames[i].frame)\n
-            );\n
-            currentTimeMs += frames[i].holdFor;\n
-          }\n
-          timeoutIds.push(\n
-            setTimeout(() => {\n
-              setIsPlaying(false);\n
-              clearTimeouts();\n
-            }, currentTimeMs)\n
-          );\n
-          if (useAudio) {\n
-            let playResult = audioElement.play();\n
-            playResult.catch((e) => {\n
-              useAudio = false;\n
-              document.getElementById(\"audio-warning\").hidden = false;\n
-            });\n
-            audioElement.currentTime = 0;\n
-          }\n
+          startPlaying();\n
         }\n
       }\n
+\n
+      if (loop) { startPlaying(); }\n
     </script>\n
   </body>\n
 </html>"
@@ -311,7 +325,7 @@ do
     if [ $render_html = true ]; then
       echo -e "holdFor:$holdFor}," >> "$animation_name/$animation_name.html"
     fi
-    
+
   fi
   prevNum=$frameNum
 
