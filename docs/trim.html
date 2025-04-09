@@ -14,9 +14,8 @@
             <img id="output-image-3" class="column is-one-third" />
         </div>
         <script type="module">
-            const PROJECT_URL_SLUG = "image-to-text";
-            import { FFmpeg } from `/${PROJECT_URL_SLUG}/packages/ffmpeg/ffmpeg/package/dist/esm/index.js`;
-            import { fetchFile } from `/${PROJECT_URL_SLUG}/packages/ffmpeg/util/package/dist/esm/index.js`;
+            import { FFmpeg } from "/image-to-text/packages/ffmpeg/ffmpeg/package/dist/esm/index.js";
+            import { fetchFile } from "/image-to-text/packages/ffmpeg/util/package/dist/esm/index.js";
             let ffmpeg = null;
 
             const trim = async ({ target: { files } }) => {
@@ -31,7 +30,7 @@
                     });
                     await ffmpeg.load({
                         coreURL:
-                            `/${PROJECT_URL_SLUG}/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js`,
+                            "/image-to-text/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
                     });
                 }
                 const { name } = files[0];
