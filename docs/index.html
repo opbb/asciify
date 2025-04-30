@@ -166,10 +166,10 @@
             }
         </script>
         <script type="module">
-            import { FFmpeg } from "/packages/ffmpeg/ffmpeg/package/dist/esm/index.js";
-            import { fetchFile } from "/packages/ffmpeg/util/package/dist/esm/index.js";
-            //import { FFmpeg } from "/image-to-text/packages/ffmpeg/ffmpeg/package/dist/esm/index.js";
-            //import { fetchFile } from "/image-to-text/packages/ffmpeg/util/package/dist/esm/index.js";
+            //import { FFmpeg } from "/packages/ffmpeg/ffmpeg/package/dist/esm/index.js";
+            //import { fetchFile } from "/packages/ffmpeg/util/package/dist/esm/index.js";
+            import { FFmpeg } from "/image-to-text/packages/ffmpeg/ffmpeg/package/dist/esm/index.js";
+            import { fetchFile } from "/image-to-text/packages/ffmpeg/util/package/dist/esm/index.js";
             let ffmpeg = null;
 
             // Define elements
@@ -217,8 +217,8 @@
                     });
                     await ffmpeg.load({
                         coreURL:
-                            "/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
-                        //"/image-to-text/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
+                            //"/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
+                        "/image-to-text/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
                     });
                 } else {
                     // clean up ffmpeg instance
