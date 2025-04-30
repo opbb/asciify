@@ -1,0 +1,172 @@
+function textFramesArrayToFramesArray(textFramesArray, msPerFrame) {
+  const framesArray = [];
+  for (let i = 0; i < textFramesArray.length; i++) {
+    framesArray.push({
+      frame: textFramesArray[i],
+      holdFor: msPerFrame,
+    });
+  }
+  return framesArray;
+}
+
+function textFramesToHTML(
+  textFramesArray,
+  animationName,
+  includeAudio,
+  loop,
+  msPerFrame,
+) {
+  includeAudio = includeAudio && !loop;
+  let standaloneHTML = `<!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>${animationName}</title>
+
+      <style>
+        body {
+          color: white;
+          background-color: black;
+          font-size: 10px;
+          overflow: auto;
+          white-space: nowrap;
+          text-align: center;
+          justify-content: center;
+          font-family: monospace;
+          line-height: 1em;
+          letter-spacing: 0.3em;
+          padding: 10px;
+        }
+
+        #screen-container {
+          width: min-content;
+          margin: auto;
+        }
+
+        #audio-warning {
+          font-size: 12px;
+          margin: 10px;
+          text-wrap: wrap;
+          line-height: 15px;
+        }
+
+        button {
+          color: white;
+          background-color: black;
+          border-color: white;
+          border-width: 4px;
+          padding: 0.5em;
+          width: 100%;
+        }
+
+        button:hover {
+          color: black;
+          background-color: white;
+          border-color: white;
+        }
+      </style>
+    </head>
+    <body>
+      <div id="screen-container">
+        <div id="audio-warning" hidden>
+          <i
+            >(Warning: The audio for this video could not be found. Please ensure
+            it is in the same folder, and is named <span id="current-file-name"></span>_Audio.mp3)</i
+          >
+        </div>
+        ${loop ? "" : `<button onclick="buttonPress()">&#9658;</button>` /* don't add a play button if the video loops */}
+        <b><div id="anim-container"></div></b>
+            </div>
+            <script>
+              frames = `;
+
+  framesArray = textFramesArrayToFramesArray(textFramesArray, msPerFrame);
+  standaloneHTML += JSON.stringify(framesArray);
+  standaloneHTML += `;
+  </script>
+  <script>
+  let useAudio = ${includeAudio};
+  let audioElement = undefined;
+  if (useAudio) {
+    audioElement = new Audio(
+      window.location.href.replace(/\.html/, "_Audio.mp3")
+    );
+    audioElement.load();
+  }
+  document.getElementById("current-file-name").innerHTML = window.location.href.replace(/\.html/, "").split("/").slice(-1)[0];
+
+  let isPlaying = ${loop};
+  let loop = ${loop};
+
+  const timeoutIds = [];
+  function clearTimeouts() {
+    while (timeoutIds.length > 0) {
+      clearTimeout(timeoutIds.pop());
+    }
+  }
+
+  const animContainer = document.getElementById("anim-container");
+  animContainer.innerHTML = frames[0].frame;
+  function updateAnimContainer(frame) {
+    document.getElementById("anim-container").innerHTML = frame;
+  }
+
+  const button = document.querySelector("button");
+  function setIsPlaying(newIsPlaying) {
+    if (isPlaying === newIsPlaying) {
+      return;
+    }
+    if (newIsPlaying === true) {
+      button.innerHTML = "&#9632;"; // Set button to stop symbol
+      isPlaying = true;
+    } else {
+      button.innerHTML = "&#9658;"; // Set button to play symbol
+      isPlaying = false;
+    }
+  }
+
+  function startPlaying() {
+    let currentTimeMs = 0;
+    for (let i = 0; i < frames.length; i++) {
+      timeoutIds.push(
+      setTimeout(updateAnimContainer, currentTimeMs, frames[i].frame)
+      );
+      currentTimeMs += frames[i].holdFor;
+    }
+    timeoutIds.push(
+    setTimeout(() => {
+      if (!loop) { setIsPlaying(false); }
+      clearTimeouts();
+      if (loop) { startPlaying(); }
+    }, currentTimeMs)
+    );
+    if (useAudio) {
+      let playResult = audioElement.play();
+      playResult.catch((e) => {
+        useAudio = false;
+        document.getElementById("audio-warning").hidden = false;
+      });
+      audioElement.currentTime = 0;
+    }
+  }
+  function buttonPress() {
+    if (isPlaying) {
+      setIsPlaying(false);
+      clearTimeouts();
+      animContainer.innerHTML = frames[0].frame;
+      if (useAudio) {
+        audioElement.pause();
+      }
+    } else {
+      setIsPlaying(true);
+      startPlaying();
+    }
+  }
+
+  if (loop) { startPlaying(); }
+  </script>
+  </body>
+</html>`;
+  return standaloneHTML;
+}

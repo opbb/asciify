@@ -18,7 +18,7 @@
             import { fetchFile } from "/image-to-text/packages/ffmpeg/util/package/dist/esm/index.js";
             let ffmpeg = null;
 
-            const trim = async ({ target: { files } }) => {
+            async function loadFFmpeg() {
                 const message = document.getElementById("message");
                 if (ffmpeg === null) {
                     ffmpeg = new FFmpeg();
@@ -33,6 +33,10 @@
                             "/image-to-text/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
                     });
                 }
+            }
+
+            const trim = async ({ target: { files } }) => {
+                loadFFmpeg();
                 const { name } = files[0];
                 await ffmpeg.writeFile(name, await fetchFile(files[0]));
                 message.innerHTML = "Start trimming";

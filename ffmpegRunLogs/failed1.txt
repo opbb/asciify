@@ -1,0 +1,50 @@
+ScreenRecording_02-06-2025 17-18-55_1.mov
+ffmpeg version 5.1.4 Copyright (c) 2000-2023 the FFmpeg developers
+  built with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.40 (5c27e79dd0a9c4e27ef2326841698cdd4f6b5784)
+  configuration: --target-os=none --arch=x86_32 --enable-cross-compile --disable-asm --disable-stripping --disable-programs --disable-doc --disable-debug --disable-runtime-cpudetect --disable-autodetect --nm=emnm --ar=emar --ranlib=emranlib --cc=emcc --cxx=em++ --objcc=emcc --dep-cc=emcc --extra-cflags='-I/opt/include -O3 -msimd128' --extra-cxxflags='-I/opt/include -O3 -msimd128' --disable-pthreads --disable-w32threads --disable-os2threads --enable-gpl --enable-libx264 --enable-libx265 --enable-libvpx --enable-libmp3lame --enable-libtheora --enable-libvorbis --enable-libopus --enable-zlib --enable-libwebp --enable-libfreetype --enable-libfribidi --enable-libass --enable-libzimg
+  libavutil      57. 28.100 / 57. 28.100
+  libavcodec     59. 37.100 / 59. 37.100
+  libavformat    59. 27.100 / 59. 27.100
+  libavdevice    59.  7.100 / 59.  7.100
+  libavfilter     8. 44.100 /  8. 44.100
+  libswscale      6.  7.100 /  6.  7.100
+  libswresample   4.  7.100 /  4.  7.100
+  libpostproc    56.  6.100 / 56.  6.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'ScreenRecording_02-06-2025 17-18-55_1.mov':
+  Metadata:
+    major_brand     : qt
+    minor_version   : 0
+    compatible_brands: qt
+    creation_time   : 2025-02-06T23:19:57.000000Z
+    com.apple.quicktime.author: ReplayKitRecording
+  Duration: 00:00:23.26, start: 0.000000, bitrate: 1898 kb/s
+  Stream #0:0[0x1](und): Video: hevc (Main), 1 reference frame (hvc1 / 0x31637668), yuvj420p(pc, bt709/bt709/iec61966-2-1, progressive, left), 888x1920 (896x1920), 1884 kb/s, 36.77 fps, 59.94 tbr, 600 tbn (default)
+    Metadata:
+      creation_time   : 2025-02-06T23:19:57.000000Z
+      handler_name    : Core Media Video
+      vendor_id       : [0][0][0][0]
+      encoder         : 'hvc1'
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 2 kb/s (default)
+    Metadata:
+      creation_time   : 2025-02-06T23:19:57.000000Z
+      handler_name    : Core Media Audio
+      vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:0 -> #0:0 (hevc (native) -> mjpeg (native))
+[graph 0 input from stream 0:0 @ 0xe38150] w:888 h:1920 pixfmt:yuvj420p tb:1/600 fr:60000/1001 sar:0/1
+Output #0, image2, to 'videoFrames/%06d.jpg':
+  Metadata:
+    major_brand     : qt
+    minor_version   : 0
+    compatible_brands: qt
+    com.apple.quicktime.author: ReplayKitRecording
+    encoder         : Lavf59.27.100
+  Stream #0:0(und): Video: mjpeg, 1 reference frame, yuvj420p(pc, bt709/bt709/iec61966-2-1, progressive, left), 888x1920 (0x0), q=2-31, 200 kb/s, 59.94 fps, 59.94 tbn (default)
+    Metadata:
+      creation_time   : 2025-02-06T23:19:57.000000Z
+      handler_name    : Core Media Video
+      vendor_id       : [0][0][0][0]
+      encoder         : Lavc59.37.100 mjpeg
+    Side data:
+      cpb: bitrate max/min/avg: 0/0/200000 buffer size: 0 vbv_delay: N/A
+Uncaught (in promise) RuntimeError: index out of bounds

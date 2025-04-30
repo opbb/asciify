@@ -17,11 +17,8 @@
     <body>
         <section class="section">
             <div class="container">
-                <p class="title has-text-centered">image-to-text</p>
+                <p class="title has-text-centered">Asciify</p>
             </div>
-        </section>
-        <section class="section">
-            <input type="range" min="1" max="50" value="10" class="slider" />
         </section>
         <section id="content-container" class="section">
             <nav id="control-buttons" class="columns">
@@ -47,79 +44,626 @@
                     </button>
                 </div>
             </nav>
-            <!-- <div class="container">
+        </section>
+        <section class="section py-0">
+            <p class="is-size-3 has-text-centered">Options</p>
+            <div class="columns">
+                <div class="column is-one-half">
+                    <p class="is-size-5 has-text-centered">
+                        Resolution reduction factor
+                    </p>
+                    <div class="columns is-vcentered">
+                        <div class="column is-one-fifth">
+                            <input
+                                id="reduction-input"
+                                class="input"
+                                type="number"
+                            />
+                        </div>
+                        <div class="column">
+                            <div class="vertical-center-flexbox">
+                                <input
+                                    id="reduction-range"
+                                    type="range"
+                                    class="slider"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div
+                        class="checkboxes"
+                        style="justify-content: space-evenly"
+                    >
+                        <label class="checkbox has-text-centered">
+                            <p class="is-size-5 mb-3">GIF mode</p>
+                            <input type="checkbox" id="loop-checkbox" />
+                        </label>
+
+                        <label class="checkbox has-text-centered">
+                            <p class="is-size-5 mb-3">Include audio</p>
+                            <input type="checkbox" id="audio-checkbox" />
+                        </label>
+
+                        <label class="checkbox has-text-centered">
+                            <p class="is-size-5 mb-3">Invert values</p>
+                            <input type="checkbox" id="invert-checkbox" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="columns">
+                <div class="column is-one-fifth m-0 p-0"></div>
+                <div class="column is-three-fifths">
+                    <button
+                        class="button is-fullwidth is-normal"
+                        id="apply-options-button"
+                    >
+                        Apply Changes
+                    </button>
+                </div>
+                <div class="column is-one-fifth m-0 p-0"></div>
+            </div>
+            <div class="container">
                 <p id="loading-text" class="has-text-centered">
-                    <span id="loading-spinner"></span>
+                    <!--<span id="loading-spinner"></span>-->
                 </p>
-            </div> -->
-            <div class="columns" style="min-height: 50vh">
-                <div class="column is-half">
-                    <img id="media" />
+            </div>
+        </section>
+        <section class="section">
+            <div class="ascii-image-container" style="min-height: 50vh">
+                <div id="play-button-visibility-container" hidden>
+                    <!-- The Bulma button class will not allow a button to become hidden, its container must become hidden to hide it. -->
+                    <button id="play-button" class="button is-fullwidth">
+                        &#9658;
+                    </button>
                 </div>
-                <div class="column is-half">
-                    <p id="text-image" class="ascii-image"></p>
-                </div>
+                <p id="text-image" class="ascii-image"></p>
             </div>
         </section>
         <footer class="footer has-text-centered is-italic">Footer</footer>
-
+        <script src="text-video-player.js"></script>
         <script src="image-to-text.js"></script>
+        <script src="video-to-text.js"></script>
+        <script>
+            // REDUCTION RANGE OPTIONS
+            const minReductionFactor = 1;
+            const maxReductionFactor = 50;
+            const defaultReductionFactor = 10;
+
+            const reductionInputEl = document.getElementById("reduction-input");
+            const reductionRangeEl = document.getElementById("reduction-range");
+
+            // Assign values
+            reductionInputEl.min = minReductionFactor;
+            reductionInputEl.max = maxReductionFactor;
+            reductionInputEl.value = defaultReductionFactor;
+            reductionInputEl.placeholder = defaultReductionFactor;
+            reductionRangeEl.min = minReductionFactor;
+            reductionRangeEl.max = maxReductionFactor;
+            reductionRangeEl.value = defaultReductionFactor;
+
+            // Assign update functions
+            reductionInputEl.onchange = ensureReductionInputIsValid; // When clicking off of input, replace an empty value with the default
+            reductionRangeEl.onchange = syncReductionInputToRange;
+            reductionInputEl.oninput = syncReductionRangeToInput;
+            reductionRangeEl.oninput = syncReductionInputToRange;
+
+            function syncReductionRangeToInput() {
+                reductionRangeEl.value = reductionInputEl.value;
+            }
+
+            function ensureReductionInputIsValid() {
+                if (reductionInputEl.value === "") {
+                    reductionInputEl.value = defaultReductionFactor;
+                }
+                syncReductionRangeToInput();
+            }
+
+            function syncReductionInputToRange() {
+                reductionInputEl.value = reductionRangeEl.value;
+            }
+        </script>
         <script type="module">
             import { FFmpeg } from "/packages/ffmpeg/ffmpeg/package/dist/esm/index.js";
             import { fetchFile } from "/packages/ffmpeg/util/package/dist/esm/index.js";
+            //import { FFmpeg } from "/image-to-text/packages/ffmpeg/ffmpeg/package/dist/esm/index.js";
+            //import { fetchFile } from "/image-to-text/packages/ffmpeg/util/package/dist/esm/index.js";
             let ffmpeg = null;
 
+            // Define elements
             const imageSelector = document.getElementById("image-selector");
             imageSelector.onchange = loadMedia;
             const saveButton = document.getElementById("save-button");
             saveButton.disabled = true;
             saveButton.onclick = saveFile;
-            const mediaEl = document.getElementById("media");
+            const applyOptionsButton = document.getElementById(
+                "apply-options-button",
+            );
+            applyOptionsButton.onclick = applyOptions;
+            let previousOptions = undefined;
             const textImageEl = document.getElementById("text-image");
-
+            const loadingTextEl = document.getElementById("loading-text");
             let textImages = undefined;
+            let image = undefined;
+            let savableZip = undefined;
+            const STANDARD_INPUT_FILE_NAME = "inputFile"; // Without the extension
+            const MEDIA_TYPE = {
+                VIDEO: "video",
+                IMAGE: "image",
+                NO_MEDIA: "no_media",
+            };
+            let inputFileInfo = {
+                name: undefined,
+                extension: undefined,
+                mediaType: MEDIA_TYPE.NO_MEDIA,
+                msPerFrame: undefined,
+                hasAudio: undefined,
+            };
+            const FRAMES_DIR_NAME = "videoFrames";
+            const FFPROBE_OUTPUT_FILE_NAME = "ffprobeOutput.txt";
+            const AUDIO_FILE_NAME = "vidAudio.mp3";
 
-            function saveFile() {
-                const zip = new JSZip();
-                zip.file("plainTextImage.txt", plainTextImage);
-                zip.file("htmlImage.txt", htmlImage);
-                zip.generateAsync({ type: "blob" }).then(function (content) {
-                    saveAs(content, "textImages.zip");
-                });
+            async function loadFFmpeg() {
+                if (ffmpeg === null) {
+                    ffmpeg = new FFmpeg();
+                    ffmpeg.on("log", ({ message }) => {
+                        console.log(message);
+                    });
+                    ffmpeg.on("progress", ({ progress }) => {
+                        loadingTextEl.innerHTML = `${progress * 100} %`;
+                        console.log(`${progress * 100} %`);
+                    });
+                    await ffmpeg.load({
+                        coreURL:
+                            "/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
+                        //"/image-to-text/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js",
+                    });
+                } else {
+                    // clean up ffmpeg instance
+                    const lsRoot = await ffmpeg.listDir(".");
+
+                    const fileDeletionPromisesArray = [];
+
+                    // Delete input file
+                    const standardizedInputFileName =
+                        STANDARD_INPUT_FILE_NAME +
+                        "." +
+                        inputFileInfo.extension;
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                !fsNode.isDir &&
+                                fsNode.name === standardizedInputFileName
+                            );
+                        })
+                    ) {
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteFile(standardizedInputFileName),
+                        );
+                    }
+
+                    // Delete ffprobe output
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                !fsNode.isDir &&
+                                fsNode.name === FFPROBE_OUTPUT_FILE_NAME
+                            );
+                        })
+                    ) {
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteFile(FFPROBE_OUTPUT_FILE_NAME),
+                        );
+                    }
+
+                    // Delete extracted audio
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                !fsNode.isDir && fsNode.name === AUDIO_FILE_NAME
+                            );
+                        })
+                    ) {
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteFile(AUDIO_FILE_NAME),
+                        );
+                    }
+
+                    // Delete video frames
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                fsNode.isDir && fsNode.name === FRAMES_DIR_NAME
+                            );
+                        })
+                    ) {
+                        const lsFrames = await ffmpeg.listDir(FRAMES_DIR_NAME);
+
+                        const frameDeletionPromisesArray = [];
+                        for (let i = 0; i < lsFrames.length; i++) {
+                            if (lsFrames[i].isDir) {
+                                continue;
+                            }
+                            frameDeletionPromisesArray.push(
+                                ffmpeg.deleteFile(
+                                    FRAMES_DIR_NAME + "/" + lsFrames[i].name,
+                                ),
+                            );
+                        }
+                        await Promise.all(frameDeletionPromisesArray);
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteDir(FRAMES_DIR_NAME),
+                        );
+                    }
+
+                    await Promise.all(fileDeletionPromisesArray);
+                }
             }
 
-            async function loadMedia() {
-                const mediaFile = imageSelector.files[0];
+            function saveFile() {
+                if (savableZip === undefined) {
+                    return;
+                }
+                savableZip
+                    .generateAsync({ type: "blob" })
+                    .then(function (content) {
+                        saveAs(content, inputFileInfo.name + "-asciified.zip");
+                    });
+            }
+
+            function getMediaType(mediaFile) {
                 if (mediaFile.type.includes("video")) {
-                    loadVideo(mediaFile);
+                    return MEDIA_TYPE.VIDEO;
                 } else if (mediaFile.type.includes("image")) {
-                    loadImage(mediaFile);
+                    return MEDIA_TYPE.IMAGE;
                 } else {
                     console.error(
                         `Incompatible media type (${mediaFile.type}). Must be either image or video.`,
                     );
+                    return MEDIA_TYPE.NO_MEDIA;
                 }
             }
 
-            async function loadVideo(videoFile) {
-                console.log("loading video");
+            // === Load Media ===
+
+            async function loadMedia() {
+                // Clear info from previous media
+                saveButton.disabled = true;
+                previousOptions = undefined;
+                clearVideoPlayer();
+
+                const mediaFile = imageSelector.files[0];
+                const loadedMediaType = getMediaType(mediaFile);
+                if (loadedMediaType !== MEDIA_TYPE.NO_MEDIA) {
+                    let mediaFileNameArray = mediaFile.name.split(".");
+                    const inputFileExtension = mediaFileNameArray.pop();
+                    const inputFileName = mediaFileNameArray.reduce(
+                        (accumulator, currentValue) =>
+                            accumulator + currentValue,
+                        "",
+                    );
+                    inputFileInfo = {
+                        name: inputFileName,
+                        extension: inputFileExtension,
+                        mediaType: loadedMediaType,
+                        msPerFrame: undefined,
+                        hasAudio: undefined,
+                    };
+                }
+                switch (loadedMediaType) {
+                    case MEDIA_TYPE.IMAGE:
+                        await loadImage(mediaFile);
+                        break;
+                    case MEDIA_TYPE.VIDEO:
+                        await loadVideo(mediaFile);
+                        break;
+                    case MEDIA_TYPE.NO_MEDIA:
+                        // do nothing
+                        break;
+                }
             }
 
             async function loadImage(imageFile) {
-                saveButton.disabled = true;
-                mediaEl.src = undefined;
                 textImages = undefined;
 
                 const reader = new FileReader();
                 reader.onloadend = async () => {
-                    let image = await IJS.Image.load(reader.result);
-                    mediaEl.src = image.toDataURL();
-                    textImages = imageToText(image);
-                    textImageEl.innerHTML = textImages.htmlImage;
-                    saveButton.disabled = false;
+                    image = await IJS.Image.load(reader.result); // causes GET http://project-url/undefined request. I don't know why
+                    processMedia();
                 };
-                console.log(imageFile);
                 reader.readAsArrayBuffer(imageFile);
+            }
+
+            async function loadVideo(videoFile) {
+                await loadFFmpeg();
+                const standardizedInputFileName =
+                    STANDARD_INPUT_FILE_NAME + "." + inputFileInfo.extension;
+                console.log("about to write file")
+                await ffmpeg.writeFile(
+                    standardizedInputFileName,
+                    await fetchFile(videoFile),
+                );
+                console.log("wrote file")
+                const currentOptions = getOptions();
+
+                // Get framerate
+                await ffmpeg.ffprobe([
+                    "-v",
+                    "0",
+                    "-of",
+                    "csv=p=0",
+                    "-select_streams",
+                    "v:0",
+                    "-show_entries",
+                    "stream=width,avg_frame_rate",
+                    standardizedInputFileName,
+                    "-o",
+                    FFPROBE_OUTPUT_FILE_NAME,
+                ]);
+
+                const ffprobeOutputString = String(
+                    new TextDecoder().decode(
+                        await ffmpeg.readFile(FFPROBE_OUTPUT_FILE_NAME),
+                    ),
+                );
+
+                // FFprobe output
+                const widthString = ffprobeOutputString.split(",")[0];
+                const framerateString = ffprobeOutputString.split(",")[1];
+
+                const reducedVidWidth = Math.round(
+                    Number(widthString) / currentOptions.reductionFactor,
+                );
+
+                // The ffprobe output will be a precise fraction in the format "N/D", which we need to turn into a usable number.
+                const fps = eval(framerateString.replace(/[^0-9\/]*/gi, ""));
+                inputFileInfo.msPerFrame = Math.round(1000 / fps); // Record the miliseconds per frame so we can add that data to each frame later
+
+                await ffmpeg.createDir(FRAMES_DIR_NAME);
+
+                let vidProcessingPromises = [];
+
+                console.log("extracting frames and audio")
+
+                // Extract audio from video
+                await ffmpeg.exec([
+                        "-i",
+                        standardizedInputFileName,
+                        "-vn",
+                        "-acodec",
+                        "libmp3lame",
+                        "-q:a",
+                        "4",
+                        AUDIO_FILE_NAME,
+                    ]);
+
+                console.log("audio extracted")
+
+                // Split video into frames
+                await ffmpeg.exec([
+                        "-i",
+                        standardizedInputFileName,
+                        "-v",
+                        "0",
+                        "-vf",
+                        `scale=${reducedVidWidth}:-2`,
+                        "videoFrames/%06d.png",
+                    ]);
+                console.log("frames extracted")
+
+                const lsRoot = await ffmpeg.listDir(".");
+                inputFileInfo.hasAudio = lsRoot.some((fsNode) => {
+                    return !fsNode.isDir && fsNode.name === AUDIO_FILE_NAME;
+                });
+
+                processMedia();
+            }
+
+            // === Process Media ===
+
+            async function processMedia() {
+                previousOptions = getOptions();
+                switch (inputFileInfo.mediaType) {
+                    case MEDIA_TYPE.IMAGE:
+                        processImage(); // do not await because this function is not async
+                        break;
+                    case MEDIA_TYPE.VIDEO:
+                        await processVideo();
+                        break;
+                    case MEDIA_TYPE.NO_MEDIA:
+                        // do nothing
+                        break;
+                }
+                if (inputFileInfo.mediaType !== MEDIA_TYPE.NO_MEDIA) {
+                    saveButton.disabled = false;
+                }
+            }
+
+            function processImage() {
+                if (image === undefined) {
+                    console.error("Cannot process image with none loaded.");
+                    return;
+                }
+
+                const currentOptions = getOptions();
+                const textImages = imageToText(
+                    image,
+                    currentOptions.isInvert,
+                    currentOptions.reductionFactor,
+                );
+                textImageEl.innerHTML = textImages.htmlImage;
+
+                const standaloneHTML = `<html>
+                  <head>
+                    <meta charset="UTF-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <title>${inputFileInfo.name}</title>
+
+                    <style>
+                      body {
+                        color: white;
+                        background-color: black;
+                        font-size: 10px;
+                        overflow: auto;
+                        white-space: nowrap;
+                        text-align: center;
+                        justify-content: center;
+                        font-family: monospace;
+                        line-height: 1em;
+                        letter-spacing: 0.3em;
+                        padding: 10px;
+                      }
+
+                      #screen-container {
+                        width: min-content;
+                        margin: auto;
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <b><div id="screen-container">${textImages.htmlImage}</div></b>
+                  </body>
+                </html>`;
+
+                // Zip up final product
+                savableZip = new JSZip();
+                savableZip.file(
+                    inputFileInfo.name + ".txt",
+                    textImages.plainTextImage,
+                );
+                savableZip.file(inputFileInfo.name + ".html", standaloneHTML);
+            }
+
+            async function processVideo() {
+                if (ffmpeg === null) {
+                    console.error(
+                        "Cannot process video: ffmpeg has not been initialized.",
+                    );
+                    return;
+                }
+                const lsRoot = await ffmpeg.listDir(".");
+                if (
+                    !lsRoot.some((fsNode) => {
+                        return fsNode.isDir && fsNode.name === FRAMES_DIR_NAME;
+                    })
+                ) {
+                    console.error(
+                        "Cannot process video: video frames directory is not present.",
+                    );
+                    return;
+                }
+
+                const currentOptions = getOptions();
+
+                // Loop through all frames
+                let frameFilesArray = (
+                    await ffmpeg.listDir(FRAMES_DIR_NAME)
+                ).filter((file) => {
+                    return !(file.name === "." || file.name === "..");
+                });
+                const frameProcessingPromisesArray = new Array(
+                    frameFilesArray.length,
+                );
+                for (let i = 0; i < frameFilesArray.length; i++) {
+                    frameProcessingPromisesArray[i] = frameToText(
+                        frameFilesArray[i],
+                    );
+                }
+                let textFramesArray = await Promise.all(
+                    frameProcessingPromisesArray,
+                );
+
+                let standaloneHTML = textFramesToHTML(
+                    textFramesArray,
+                    inputFileInfo.name,
+                    currentOptions.isAudio && inputFileInfo.hasAudio,
+                    currentOptions.isLoop,
+                    inputFileInfo.msPerFrame,
+                );
+
+                // Zip up final product
+                savableZip = new JSZip();
+                savableZip.file(inputFileInfo.name + ".html", standaloneHTML);
+
+                let audioFileURL = undefined;
+                if (currentOptions.isAudio && inputFileInfo.hasAudio) {
+                    const audioData = await ffmpeg.readFile(AUDIO_FILE_NAME);
+                    const audioFile = new File([audioData], {
+                        type: "audio/mp3",
+                    });
+                    audioFileURL = URL.createObjectURL(audioFile);
+                    savableZip.file(
+                        inputFileInfo.name + "_Audio.mp3",
+                        audioFile,
+                    );
+                }
+
+                // Load new video in to the on-page player
+                clearVideoPlayer();
+                loadVideoPlayer(
+                    textFramesArrayToFramesArray(
+                        textFramesArray,
+                        inputFileInfo.msPerFrame,
+                    ),
+                    currentOptions.isAudio && inputFileInfo.hasAudio,
+                    currentOptions.isLoop,
+                    audioFileURL,
+                );
+            }
+
+            async function frameToText(frameFile) {
+                let data = await ffmpeg.readFile(
+                    "videoFrames/" + frameFile.name,
+                );
+                let frameBuffer = data.buffer.slice(
+                    data.byteOffset,
+                    data.byteLength + data.byteOffset,
+                );
+                let frameImage = await IJS.Image.load(frameBuffer);
+                const currentOptions = getOptions();
+                return imageToText(
+                    frameImage,
+                    currentOptions.isInvert,
+                    1, // Set reduction factor to 1, because the resolution was already reduced by ffmpeg
+                ).htmlImage;
+            }
+
+            // === Options Handling ===
+
+            function applyOptions() {
+                const currentOptions = getOptions();
+                if (
+                    JSON.stringify(previousOptions) ===
+                    JSON.stringify(currentOptions)
+                ) {
+                    return;
+                }
+                if (
+                    inputFileInfo.mediaType === MEDIA_TYPE.VIDEO &&
+                    previousOptions.reductionFactor !==
+                        currentOptions.reductionFactor
+                ) {
+                    // To resize a video we need to reload it, because that is done via FFmpeg
+                    loadMedia();
+                } else {
+                    processMedia();
+                }
+            }
+
+            const reductionFactorEl =
+                document.getElementById("reduction-input");
+            const loopCheckboxEl = document.getElementById("loop-checkbox");
+            const audioCheckboxEl = document.getElementById("audio-checkbox");
+            const invertCheckboxEl = document.getElementById("invert-checkbox");
+            function getOptions() {
+                return {
+                    reductionFactor: Number(reductionFactorEl.value),
+                    isLoop: loopCheckboxEl.checked,
+                    isAudio: audioCheckboxEl.checked,
+                    isInvert: invertCheckboxEl.checked,
+                };
             }
 
             // // === LOADING SPINNER ===

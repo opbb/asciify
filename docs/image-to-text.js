@@ -62,8 +62,10 @@ function imageToText(
   image, // Assumes image is Image class from image-js (https://github.com/image-js/image-js)
   invert = true,
   reductionFactor = 10.0,
-  adjustValueRange = true,
+  // adjustValueRange = true,
 ) {
+  const adjustValueRange = true;
+
   if (image === undefined || image === null) {
     return;
   }

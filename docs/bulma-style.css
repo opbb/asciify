@@ -21593,6 +21593,14 @@ has-background-danger.is-hoverable:active {
   letter-spacing: 0.3em;
   overflow: scroll;
   white-space: nowrap;
+  text-align: center;
+  padding: 1em;
+}
+
+.ascii-image-container {
+  background-color: hsl(219, 41.8%, 7.8%);
+  border-radius: 5px;
+  padding: 0.5em;
 }
 
 .slider {
@@ -21623,6 +21631,12 @@ has-background-danger.is-hoverable:active {
   cursor: pointer; /* Cursor on hover */
   border-radius: 15px;
   border: none;
+}
+
+.vertical-center-flexbox {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 /*# sourceMappingURL=bulma-style.css.map */
