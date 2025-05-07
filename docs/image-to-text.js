@@ -1,31 +1,3 @@
-// onmessage = (event) => {
-//   let imageToTextParams = event.data;
-
-//   // Default parameters
-//   let invert = true;
-//   let reductionFactor = 10.0;
-//   let adjustValueRange = true;
-
-//   if (imageToTextParams.invert !== undefined) {
-//     invert = imageToTextParams.invert;
-//   }
-//   if (imageToTextParams.reductionFactor !== undefined) {
-//     reductionFactor = imageToTextParams.reductionFactor;
-//   }
-//   if (imageToTextParams.adjustValueRange !== undefined) {
-//     adjustValueRange = imageToTextParams.adjustValueRange;
-//   }
-
-//   const textImages = imageToText(
-//     imageToTextParams.image,
-//     invert,
-//     reductionFactor,
-//     adjustValueRange,
-//   );
-
-//   postMessage(textImages);
-// };
-
 const valueToPlainText = {
   0: "\u00A0", // Non-breaking space
   1: ".",

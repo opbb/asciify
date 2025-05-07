@@ -21603,6 +21603,10 @@ has-background-danger.is-hoverable:active {
   padding: 0.5em;
 }
 
+.monospace {
+  font-family: "CodeNewRoman", monospace;
+}
+
 .slider {
   -webkit-appearance: none; /* Override default CSS styles */
   appearance: none;

@@ -11,6 +11,7 @@ function textFramesArrayToFramesArray(textFramesArray, msPerFrame) {
 
 function textFramesToHTML(
   textFramesArray,
+  audioFileDataURL,
   animationName,
   includeAudio,
   loop,
@@ -70,10 +71,6 @@ function textFramesToHTML(
     <body>
       <div id="screen-container">
         <div id="audio-warning" hidden>
-          <i
-            >(Warning: The audio for this video could not be found. Please ensure
-            it is in the same folder, and is named <span id="current-file-name"></span>_Audio.mp3)</i
-          >
         </div>
         ${loop ? "" : `<button onclick="buttonPress()">&#9658;</button>` /* don't add a play button if the video loops */}
         <b><div id="anim-container"></div></b>
@@ -84,17 +81,21 @@ function textFramesToHTML(
   framesArray = textFramesArrayToFramesArray(textFramesArray, msPerFrame);
   standaloneHTML += JSON.stringify(framesArray);
   standaloneHTML += `;
-  </script>
+  </script>`;
+  if (includeAudio) {
+    standaloneHTML += `
+    <script>
+      const audioFileDataURL = "${audioFileDataURL}"
+    </script>`;
+  }
+  standaloneHTML += `
   <script>
   let useAudio = ${includeAudio};
   let audioElement = undefined;
   if (useAudio) {
-    audioElement = new Audio(
-      window.location.href.replace(/\.html/, "_Audio.mp3")
-    );
+    audioElement = new Audio(audioFileDataURL);
     audioElement.load();
   }
-  document.getElementById("current-file-name").innerHTML = window.location.href.replace(/\.html/, "").split("/").slice(-1)[0];
 
   let isPlaying = ${loop};
   let loop = ${loop};
@@ -145,7 +146,7 @@ function textFramesToHTML(
       let playResult = audioElement.play();
       playResult.catch((e) => {
         useAudio = false;
-        document.getElementById("audio-warning").hidden = false;
+        console.error(e);
       });
       audioElement.currentTime = 0;
     }
