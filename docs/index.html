@@ -1,0 +1,804 @@
+<!doctype html>
+<html class="theme-dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Asciify</title>
+        <!-- image-js package can be found here https://github.com/image-js/image-js -->
+        <script src="packages/image-js.min.0.36.0.js"></script>
+        <!-- FileSaver.js package can be found here https://github.com/eligrey/FileSaver.js -->
+        <script src="packages/FileSaver.min.js"></script>
+        <!-- Bulma CSS framework can be found here https://github.com/jgthms/bulma -->
+        <link rel="stylesheet" href="bulma-style.css" />
+    </head>
+    <body>
+        <section id="content-container" class="section">
+            <p class="title has-text-centered is-spaced">Asciify</p>
+            <nav id="control-buttons" class="columns">
+                <div class="column is-half">
+                    <input
+                        id="image-selector"
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.tiff,.tif,.mov,.mp4,.m4a,.gif"
+                        style="display: none"
+                    />
+                    <label
+                        id="image-selector-button"
+                        for="image-selector"
+                        class="button is-fullwidth is-large"
+                        ><div>Select File</div></label
+                    >
+                </div>
+                <div class="column is-half">
+                    <button
+                        class="button is-fullwidth is-large"
+                        id="save-button"
+                    >
+                        Save
+                    </button>
+                </div>
+            </nav>
+        </section>
+        <section class="section py-0">
+            <p class="is-size-3 has-text-centered">Options</p>
+            <div class="columns">
+                <div class="column is-one-half">
+                    <p class="is-size-5 has-text-centered">
+                        Resolution reduction factor
+                    </p>
+                    <div class="columns is-vcentered">
+                        <div class="column is-one-fifth">
+                            <input
+                                id="reduction-input"
+                                class="input"
+                                type="number"
+                            />
+                        </div>
+                        <div class="column">
+                            <div class="vertical-center-flexbox">
+                                <input
+                                    id="reduction-range"
+                                    type="range"
+                                    class="slider"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div
+                        class="checkboxes"
+                        style="justify-content: space-evenly"
+                    >
+                        <label class="checkbox has-text-centered">
+                            <p class="is-size-5 mb-3">GIF mode</p>
+                            <input type="checkbox" id="loop-checkbox" />
+                        </label>
+
+                        <label class="checkbox has-text-centered">
+                            <p class="is-size-5 mb-3">Include audio</p>
+                            <input type="checkbox" id="audio-checkbox" />
+                        </label>
+
+                        <label class="checkbox has-text-centered">
+                            <p class="is-size-5 mb-3">Invert values</p>
+                            <input type="checkbox" id="invert-checkbox" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="section">
+            <div class="ascii-image-container" style="min-height: 50vh">
+                <p class="has-text-centered monospace is-size-4">
+                    <span id="loading-spinner"></span
+                    ><span id="loading-text"></span
+                    ><span id="loading-progress"></span>
+                </p>
+                <div id="play-button-visibility-container" hidden>
+                    <!-- The Bulma button class will not allow a button to become hidden, its container must become hidden to hide it. -->
+                    <button id="play-button" class="button is-fullwidth">
+                        &#9658;
+                    </button>
+                </div>
+                <p id="text-image" class="ascii-image"></p>
+            </div>
+        </section>
+        <footer class="footer has-text-centered is-italic">
+            <div class="columns">
+                <div class="column">
+                    Supported file formats: PNG, JPG, TIF, MOV, MP4, M4A, and
+                    GIF.
+                </div>
+                <div class="column">
+                    Asciified Examples: <br />
+                    <a href="examples/image.html">Image</a> &nbsp; &nbsp;
+                    <a href="examples/video.html">Video</a> &nbsp; &nbsp;
+                    <a href="examples/gif.html">GIF</a>
+                </div>
+                <div class="column">
+                    This tool relies on
+                    <a href="https://github.com/image-js/image-js">image-js</a>,
+                    <a href="https://github.com/eligrey/FileSaver.js"
+                        >FileSaver.js</a
+                    >, and
+                    <a href="https://ffmpegwasm.netlify.app/">FFmpeg.WASM</a>,
+                    and is styled with <a href="https://bulma.io/">Bulma</a>.
+                </div>
+            </div>
+        </footer>
+
+        <!-- Begin Script -->
+        <script src="text-video-player.js"></script>
+        <script src="image-to-text.js"></script>
+        <script src="video-to-text.js"></script>
+        <script type="module">
+            const ENV = "dev";
+            // import { FFmpeg } from "/packages/ffmpeg/ffmpeg/package/dist/esm/index.js"; // for local testing
+            // import { fetchFile } from "/packages/ffmpeg/util/package/dist/esm/index.js"; // for local testing
+            import { FFmpeg } from "/asciify/packages/ffmpeg/ffmpeg/package/dist/esm/index.js"; // on github pages
+            import { fetchFile } from "/asciify/packages/ffmpeg/util/package/dist/esm/index.js"; // on github pages
+            let ffmpeg = null;
+
+            // Constants
+            const STANDARD_INPUT_FILE_NAME = "inputFile"; // Without the extension
+            const FRAMES_DIR_NAME = "videoFrames";
+            const FFPROBE_OUTPUT_FILE_NAME = "ffprobeOutput.txt";
+            const AUDIO_FILE_NAME = "vidAudio.mp3";
+            const MEDIA_TYPE = {
+                VIDEO: "video",
+                IMAGE: "image",
+                GIF: "gif",
+                NO_MEDIA: "no_media",
+            };
+
+            // Define elements
+            const textImageEl = document.getElementById("text-image");
+            const loadingTextEl = document.getElementById("loading-text");
+            const loadingProgressEl =
+                document.getElementById("loading-progress");
+            const loadingSpinnerEl = document.getElementById("loading-spinner");
+            const imageSelector = document.getElementById("image-selector");
+            imageSelector.onchange = loadMedia;
+            const imageSelectorButton = document.getElementById(
+                "image-selector-button",
+            );
+            const saveButton = document.getElementById("save-button");
+            saveButton.disabled = true;
+            saveButton.onclick = saveHTMLFile;
+
+            // Persistent data
+            let textImages = undefined;
+            let image = undefined;
+            let audioFileObjectURL = undefined;
+            let audioFileDataURL = undefined;
+            let previousOptions = undefined;
+            let inputFileInfo = {
+                name: undefined,
+                extension: undefined,
+                mediaType: MEDIA_TYPE.NO_MEDIA,
+                msPerFrame: undefined,
+                hasAudio: undefined,
+            };
+            let savableHTML = undefined;
+
+            async function loadFFmpeg() {
+                if (ffmpeg === null) {
+                    ffmpeg = new FFmpeg();
+                    ffmpeg.on("log", ({ message }) => {
+                        console.log(message);
+                    });
+                    ffmpeg.on("progress", ({ progress }) => {
+                        loadingProgressEl.innerHTML = `${Math.round(progress * 100)} %`;
+                    });
+                    await ffmpeg.load({
+                        coreURL:
+                            // "/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js", // for local testing
+                            "/asciify/packages/ffmpeg/core/package/dist/esm/ffmpeg-core.js", // on github pages
+                    });
+                } else {
+                    // clean up ffmpeg instance
+                    const lsRoot = await ffmpeg.listDir(".");
+
+                    const fileDeletionPromisesArray = [];
+
+                    // Delete input file
+                    const standardizedInputFileName =
+                        STANDARD_INPUT_FILE_NAME +
+                        "." +
+                        inputFileInfo.extension;
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                !fsNode.isDir &&
+                                fsNode.name === standardizedInputFileName
+                            );
+                        })
+                    ) {
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteFile(standardizedInputFileName),
+                        );
+                    }
+
+                    // Delete ffprobe output
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                !fsNode.isDir &&
+                                fsNode.name === FFPROBE_OUTPUT_FILE_NAME
+                            );
+                        })
+                    ) {
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteFile(FFPROBE_OUTPUT_FILE_NAME),
+                        );
+                    }
+
+                    // Delete extracted audio
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                !fsNode.isDir && fsNode.name === AUDIO_FILE_NAME
+                            );
+                        })
+                    ) {
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteFile(AUDIO_FILE_NAME),
+                        );
+                    }
+
+                    // Delete video frames
+                    if (
+                        lsRoot.some((fsNode) => {
+                            return (
+                                fsNode.isDir && fsNode.name === FRAMES_DIR_NAME
+                            );
+                        })
+                    ) {
+                        const lsFrames = await ffmpeg.listDir(FRAMES_DIR_NAME);
+
+                        const frameDeletionPromisesArray = [];
+                        for (let i = 0; i < lsFrames.length; i++) {
+                            if (lsFrames[i].isDir) {
+                                continue;
+                            }
+                            frameDeletionPromisesArray.push(
+                                ffmpeg.deleteFile(
+                                    FRAMES_DIR_NAME + "/" + lsFrames[i].name,
+                                ),
+                            );
+                        }
+                        await Promise.all(frameDeletionPromisesArray);
+                        fileDeletionPromisesArray.push(
+                            ffmpeg.deleteDir(FRAMES_DIR_NAME),
+                        );
+                    }
+
+                    await Promise.all(fileDeletionPromisesArray);
+                }
+            }
+
+            function saveHTMLFile() {
+                if (savableHTML === undefined) {
+                    return;
+                }
+
+                const savableBlob = new Blob([savableHTML], {
+                    type: "text/html",
+                });
+
+                saveAs(savableBlob, inputFileInfo.name + ".html");
+            }
+
+            async function audioToBase64(audioFile) {
+                return new Promise((resolve, reject) => {
+                    let reader = new FileReader();
+                    reader.onerror = reject;
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(audioFile);
+                });
+            }
+
+            function getMediaType(mediaFile) {
+                if (mediaFile.type.includes("gif")) {
+                    return MEDIA_TYPE.GIF;
+                } else if (mediaFile.type.includes("video")) {
+                    return MEDIA_TYPE.VIDEO;
+                } else if (mediaFile.type.includes("image")) {
+                    return MEDIA_TYPE.IMAGE;
+                } else {
+                    console.error(
+                        `Incompatible media type (${mediaFile.type}). Must be either image or video.`,
+                    );
+                    return MEDIA_TYPE.NO_MEDIA;
+                }
+            }
+
+            // === Load Media ===
+
+            async function loadMedia() {
+                // Clear info from previous media
+                saveButton.disabled = true;
+                previousOptions = undefined;
+                clearVideoPlayer();
+
+                lockControls();
+
+                startLoadingSpinner();
+                const mediaFile = imageSelector.files[0];
+                const loadedMediaType = getMediaType(mediaFile);
+                if (loadedMediaType !== MEDIA_TYPE.NO_MEDIA) {
+                    let mediaFileNameArray = mediaFile.name.split(".");
+                    const inputFileExtension = mediaFileNameArray.pop();
+                    const inputFileName = mediaFileNameArray.reduce(
+                        (accumulator, currentValue) =>
+                            accumulator + currentValue,
+                        "",
+                    );
+                    inputFileInfo = {
+                        name: inputFileName,
+                        extension: inputFileExtension,
+                        mediaType: loadedMediaType,
+                        msPerFrame: undefined,
+                        hasAudio: undefined,
+                    };
+                }
+                updateEnabledOptions();
+                switch (loadedMediaType) {
+                    case MEDIA_TYPE.IMAGE:
+                        await loadImage(mediaFile);
+                        break;
+                    case MEDIA_TYPE.VIDEO:
+                        await loadVideo(mediaFile);
+                        break;
+                    case MEDIA_TYPE.GIF:
+                        await loadVideo(mediaFile); // Gifs can be loaded and processed like videos
+                        break;
+                    case MEDIA_TYPE.NO_MEDIA:
+                        unlockControls();
+                        break;
+                }
+            }
+
+            async function loadImage(imageFile) {
+                textImages = undefined;
+
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    image = await IJS.Image.load(reader.result); // causes GET http://project-url/undefined request. I don't know why
+                    processMedia();
+                };
+                reader.readAsArrayBuffer(imageFile);
+            }
+
+            async function loadVideo(videoFile) {
+                await loadFFmpeg();
+                const standardizedInputFileName =
+                    STANDARD_INPUT_FILE_NAME + "." + inputFileInfo.extension;
+                await ffmpeg.writeFile(
+                    standardizedInputFileName,
+                    await fetchFile(videoFile),
+                );
+                const currentOptions = getOptions();
+
+                // Get framerate
+                await ffmpeg.ffprobe([
+                    "-v",
+                    "0",
+                    "-of",
+                    "csv=p=0",
+                    "-select_streams",
+                    "v:0",
+                    "-show_entries",
+                    "stream=width,avg_frame_rate",
+                    standardizedInputFileName,
+                    "-o",
+                    FFPROBE_OUTPUT_FILE_NAME,
+                ]);
+
+                const ffprobeOutputString = String(
+                    new TextDecoder().decode(
+                        await ffmpeg.readFile(FFPROBE_OUTPUT_FILE_NAME),
+                    ),
+                );
+
+                // FFprobe output
+                const widthString = ffprobeOutputString.split(",")[0];
+                const framerateString = ffprobeOutputString.split(",")[1];
+
+                const reducedVidWidth = Math.round(
+                    Number(widthString) / currentOptions.reductionFactor,
+                );
+
+                // The ffprobe output will be a precise fraction in the format "N/D", which we need to turn into a usable number.
+                const fps = eval(framerateString.replace(/[^0-9\/]*/gi, ""));
+                inputFileInfo.msPerFrame = Math.round(1000 / fps); // Record the miliseconds per frame so we can add that data to each frame later
+
+                await ffmpeg.createDir(FRAMES_DIR_NAME);
+
+                let vidProcessingPromises = [];
+
+                // Update loading text
+                loadingTextEl.innerHTML = "&nbsp;extracting audio&nbsp;";
+
+                // Extract audio from video
+                await ffmpeg.exec([
+                    "-i",
+                    standardizedInputFileName,
+                    "-vn",
+                    "-acodec",
+                    "libmp3lame",
+                    "-q:a",
+                    "4",
+                    AUDIO_FILE_NAME,
+                ]);
+
+                loadingTextEl.innerHTML = "&nbsp;extracting frames&nbsp;";
+
+                // Split video into frames
+                await ffmpeg.exec([
+                    "-i",
+                    standardizedInputFileName,
+                    "-v",
+                    "0",
+                    "-vf",
+                    `scale=${reducedVidWidth}:-2`,
+                    "videoFrames/%06d.png",
+                ]);
+
+                const lsRoot = await ffmpeg.listDir(".");
+                inputFileInfo.hasAudio = lsRoot.some((fsNode) => {
+                    return !fsNode.isDir && fsNode.name === AUDIO_FILE_NAME;
+                });
+
+                if (inputFileInfo.hasAudio) {
+                    const audioData = await ffmpeg.readFile(AUDIO_FILE_NAME);
+                    const audioBlob = new Blob([audioData], {
+                        type: "audio/mp3",
+                    });
+                    audioFileObjectURL = URL.createObjectURL(audioBlob);
+                    audioFileDataURL = await audioToBase64(audioBlob);
+                }
+
+                processMedia();
+            }
+
+            // === Process Media ===
+
+            async function processMedia() {
+                lockControls();
+                startLoadingSpinner();
+                previousOptions = getOptions();
+                switch (inputFileInfo.mediaType) {
+                    case MEDIA_TYPE.IMAGE:
+                        processImage(); // do not await because this function is not async
+                        break;
+                    case MEDIA_TYPE.VIDEO:
+                        await processVideo();
+                        break;
+                    case MEDIA_TYPE.GIF: // Gifs can be loaded and processed like videos
+                        await processVideo();
+                        break;
+                    case MEDIA_TYPE.NO_MEDIA:
+                        // do nothing
+                        break;
+                }
+                if (inputFileInfo.mediaType !== MEDIA_TYPE.NO_MEDIA) {
+                    saveButton.disabled = false;
+                }
+                stopLoadingSpinner();
+                loadingTextEl.innerHTML = "";
+                loadingProgressEl.innerHTML = "";
+                unlockControls();
+            }
+
+            function processImage() {
+                if (image === undefined) {
+                    console.error("Cannot process image with none loaded.");
+                    return;
+                }
+
+                const currentOptions = getOptions();
+                const textImages = imageToText(
+                    image,
+                    currentOptions.isInvert,
+                    currentOptions.reductionFactor,
+                );
+
+                // imageToText returns both plaintext and HTML because both used to be saved.
+                // Plaintext was removed to streamline the download process, but I'm retaining the functionality in the code so it can be added back later.
+
+                textImageEl.innerHTML = textImages.htmlImage;
+
+                const standaloneHTML = `<html>
+                  <head>
+                    <meta charset="UTF-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <title>${inputFileInfo.name}</title>
+
+                    <style>
+                      body {
+                        color: white;
+                        background-color: black;
+                        font-size: 10px;
+                        overflow: auto;
+                        white-space: nowrap;
+                        text-align: center;
+                        justify-content: center;
+                        font-family: monospace;
+                        line-height: 1em;
+                        letter-spacing: 0.3em;
+                        padding: 10px;
+                      }
+
+                      #screen-container {
+                        width: min-content;
+                        margin: auto;
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <b><div id="screen-container">${textImages.htmlImage}</div></b>
+                  </body>
+                </html>`;
+
+                // Store final product
+                savableHTML = standaloneHTML;
+            }
+
+            async function processVideo() {
+                if (ffmpeg === null) {
+                    console.error(
+                        "Cannot process video: ffmpeg has not been initialized.",
+                    );
+                    return;
+                }
+                const lsRoot = await ffmpeg.listDir(".");
+                if (
+                    !lsRoot.some((fsNode) => {
+                        return fsNode.isDir && fsNode.name === FRAMES_DIR_NAME;
+                    })
+                ) {
+                    console.error(
+                        "Cannot process video: video frames directory is not present.",
+                    );
+                    return;
+                }
+
+                const currentOptions = getOptions();
+
+                loadingTextEl.innerHTML = "&nbsp;asciifying frames&nbsp;";
+
+                // Loop through all frames
+                let frameFilesArray = (
+                    await ffmpeg.listDir(FRAMES_DIR_NAME)
+                ).filter((file) => {
+                    return !(file.name === "." || file.name === "..");
+                });
+                const frameProcessingPromisesArray = new Array(
+                    frameFilesArray.length,
+                );
+                for (let i = 0; i < frameFilesArray.length; i++) {
+                    frameProcessingPromisesArray[i] = frameToText(
+                        frameFilesArray[i],
+                    );
+                }
+                let textFramesArray = await Promise.all(
+                    frameProcessingPromisesArray,
+                );
+
+                let standaloneHTML = textFramesToHTML(
+                    textFramesArray,
+                    audioFileDataURL,
+                    inputFileInfo.name,
+                    currentOptions.isAudio && inputFileInfo.hasAudio,
+                    currentOptions.isLoop,
+                    inputFileInfo.msPerFrame,
+                );
+
+                // Store final product
+                savableHTML = standaloneHTML;
+
+                // Load new video in to the on-page player
+                clearVideoPlayer();
+                loadVideoPlayer(
+                    textFramesArrayToFramesArray(
+                        textFramesArray,
+                        inputFileInfo.msPerFrame,
+                    ),
+                    currentOptions.isAudio && inputFileInfo.hasAudio,
+                    currentOptions.isLoop,
+                    audioFileObjectURL,
+                );
+            }
+
+            async function frameToText(frameFile) {
+                let data = await ffmpeg.readFile(
+                    "videoFrames/" + frameFile.name,
+                );
+                let frameBuffer = data.buffer.slice(
+                    data.byteOffset,
+                    data.byteLength + data.byteOffset,
+                );
+                let frameImage = await IJS.Image.load(frameBuffer);
+                const currentOptions = getOptions();
+                return imageToText(
+                    frameImage,
+                    currentOptions.isInvert,
+                    1, // Set reduction factor to 1, because the resolution was already reduced by ffmpeg
+                ).htmlImage;
+            }
+
+            // === Options Handling ===
+
+            function applyOptions() {
+                const currentOptions = getOptions();
+                if (
+                    JSON.stringify(previousOptions) ===
+                    JSON.stringify(currentOptions)
+                ) {
+                    return;
+                }
+                if (
+                    (inputFileInfo.mediaType === MEDIA_TYPE.VIDEO ||
+                        inputFileInfo.mediaType === MEDIA_TYPE.GIF) &&
+                    previousOptions.reductionFactor !==
+                        currentOptions.reductionFactor
+                ) {
+                    // To resize a video we need to reload it, because that is done via FFmpeg
+                    loadMedia();
+                } else {
+                    processMedia();
+                }
+            }
+
+            const reductionInputEl = document.getElementById("reduction-input");
+            const reductionRangeEl = document.getElementById("reduction-range");
+            const loopCheckboxEl = document.getElementById("loop-checkbox");
+            const audioCheckboxEl = document.getElementById("audio-checkbox");
+            const invertCheckboxEl = document.getElementById("invert-checkbox");
+            function getOptions() {
+                return {
+                    reductionFactor: Number(reductionInputEl.value),
+                    isLoop: loopCheckboxEl.checked,
+                    isAudio: audioCheckboxEl.checked,
+                    isInvert: invertCheckboxEl.checked,
+                };
+            }
+
+            function updateEnabledOptions() {
+                if (controlsLocked) {
+                    return;
+                }
+                switch (inputFileInfo.mediaType) {
+                    case MEDIA_TYPE.IMAGE:
+                        loopCheckboxEl.disabled = true;
+                        audioCheckboxEl.disabled = true;
+                        break;
+                    case MEDIA_TYPE.VIDEO:
+                        loopCheckboxEl.disabled = false;
+                        audioCheckboxEl.disabled = loopCheckboxEl.checked;
+                        break;
+                    case MEDIA_TYPE.GIF: // Gifs can be loaded and processed like videos
+                        loopCheckboxEl.disabled = false;
+                        audioCheckboxEl.disabled = true;
+                        break;
+                    case MEDIA_TYPE.NO_MEDIA:
+                        // Leave all options enabled when no media is loaded so you can set options for the media you will load
+                        loopCheckboxEl.disabled = false;
+                        audioCheckboxEl.disabled = false;
+                        break;
+                }
+            }
+
+            let controlsLocked = false;
+            function lockControls() {
+                controlsLocked = true;
+                loopCheckboxEl.disabled = true;
+                audioCheckboxEl.disabled = true;
+                invertCheckboxEl.disabled = true;
+                reductionInputEl.disabled = true;
+                reductionRangeEl.disabled = true;
+                imageSelector.disabled = true;
+                imageSelectorButton.disabled = true;
+            }
+
+            function unlockControls() {
+                controlsLocked = false;
+                invertCheckboxEl.disabled = false;
+                reductionInputEl.disabled = false;
+                reductionRangeEl.disabled = false;
+                imageSelector.disabled = false;
+                imageSelectorButton.disabled = false;
+                updateEnabledOptions();
+            }
+
+            // REDUCTION RANGE OPTIONS
+            const minReductionFactor = 1;
+            const maxReductionFactor = 50;
+            const defaultReductionFactor = 10;
+
+            // Assign values
+            reductionInputEl.min = minReductionFactor;
+            reductionInputEl.max = maxReductionFactor;
+            reductionInputEl.value = defaultReductionFactor;
+            reductionInputEl.placeholder = defaultReductionFactor;
+            reductionRangeEl.min = minReductionFactor;
+            reductionRangeEl.max = maxReductionFactor;
+            reductionRangeEl.value = defaultReductionFactor;
+
+            function syncReductionRangeToInput() {
+                reductionRangeEl.value = reductionInputEl.value;
+            }
+
+            function ensureReductionInputIsValid() {
+                if (reductionInputEl.value === "") {
+                    reductionInputEl.value = defaultReductionFactor;
+                }
+                syncReductionRangeToInput();
+            }
+
+            function syncReductionInputToRange() {
+                reductionInputEl.value = reductionRangeEl.value;
+            }
+
+            // Options update functions
+            reductionInputEl.onchange = () => {
+                // When clicking off of input, replace an empty value with the default
+                ensureReductionInputIsValid();
+                applyOptions();
+            };
+            reductionRangeEl.onchange = () => {
+                syncReductionInputToRange();
+                applyOptions();
+            };
+            reductionInputEl.oninput = syncReductionRangeToInput;
+            reductionRangeEl.oninput = syncReductionInputToRange;
+
+            loopCheckboxEl.onchange = () => {
+                // Audio cannot be used in GIF mode
+                updateEnabledOptions();
+                applyOptions();
+            };
+
+            audioCheckboxEl.onchange = () => {
+                applyOptions();
+            };
+
+            invertCheckboxEl.onchange = () => {
+                applyOptions();
+            };
+
+            // === LOADING SPINNER ===
+            if (loadingSpinnerEl === null)
+                console.error(
+                    "Loading Spinner code is present, but could not find spinner element.",
+                );
+
+            // Animation Parameters
+            const spinnerSpeed = 125; // How long each frame is held in ms
+            const animChars = ["-", "\\", "|", "/"]; // Animation frames
+            let curCharIndex = 0; // Starting frame
+
+            // Animation
+            let spinnerIntervalId;
+            function startLoadingSpinner() {
+                if (spinnerIntervalId !== undefined) {
+                    return;
+                }
+                spinnerIntervalId = setInterval(() => {
+                    curCharIndex = (curCharIndex + 1) % 4;
+                    loadingSpinnerEl.innerHTML = animChars[curCharIndex];
+                }, spinnerSpeed);
+            }
+
+            function stopLoadingSpinner() {
+                if (spinnerIntervalId !== undefined) {
+                    clearInterval(spinnerIntervalId);
+                    loadingSpinnerEl.innerHTML = "";
+                    spinnerIntervalId = undefined;
+                }
+            }
+        </script>
+    </body>
+</html>
